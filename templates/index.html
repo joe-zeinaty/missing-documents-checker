@@ -1,12 +1,79 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Support Unicode text, including accented client names. -->
     <meta charset="UTF-8" />
+
+    <!-- Let the page use the device's actual screen width. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>Missing Documents Checker</title>
   </head>
+
   <body>
     <h1>Missing Documents Checker</h1>
     <p>Compare client requirements with the documents received each month.</p>
+
+    <!--
+        Submit the form to Flask's homepage route using POST.
+        multipart/form-data is required for file uploads.
+    -->
+    <form action="/" method="post" enctype="multipart/form-data">
+      <!--
+            Upload one client register.
+            accept guides the file picker; Python must still validate it.
+            The name attribute is the key Flask uses to retrieve the file.
+        -->
+      <p>
+        <label for="clients">Client list (CSV)</label><br />
+        <input type="file" id="clients" name="clients" accept=".csv" required />
+      </p>
+
+      <!--
+            Allow multiple document uploads.
+            This field is optional: no uploads will eventually mean
+            all required documents are missing.
+        -->
+      <p>
+        <label for="documents">Client documents</label><br />
+        <input type="file" id="documents" name="documents" multiple />
+      </p>
+
+      <!-- Use the month supplied by Flask to preserve the selection. -->
+      <p>
+        <label for="month">Reporting month</label><br />
+        <input
+          type="month"
+          id="month"
+          name="month"
+          value="{{ month }}"
+          required
+        />
+      </p>
+
+      <button type="submit">Check documents</button>
+    </form>
+
+    <!-- Show a validation error only when Flask supplies one. -->
+    {% if error %}
+    <p role="alert">{{ error }}</p>
+    {% endif %}
+
+    <!--
+        Show confirmation after a valid submission.
+        Jinja, Flask's template engine, inserts the supplied values.
+        Its default HTML escaping helps display filenames safely.
+    -->
+    {% if upload_summary %}
+    <h2>Upload received</h2>
+
+    <ul>
+      <li>Client list: {{ upload_summary.clients_filename }}</li>
+      <li>Documents received: {{ upload_summary.document_count }}</li>
+      <li>Reporting month: {{ upload_summary.month }}</li>
+    </ul>
+
+    <p>Document matching has not been performed yet.</p>
+    {% endif %}
   </body>
 </html>
