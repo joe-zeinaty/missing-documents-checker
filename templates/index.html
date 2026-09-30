@@ -71,9 +71,149 @@
       <li>Client list: {{ upload_summary.clients_filename }}</li>
       <li>Documents received: {{ upload_summary.document_count }}</li>
       <li>Reporting month: {{ upload_summary.month }}</li>
+      <!-- Show how many client records passed CSV validation. -->
+      <li>Clients loaded: {{ upload_summary.client_count }}</li>
     </ul>
 
-    <p>Document matching has not been performed yet.</p>
+    {% endif %}
+
+    <!-- Show every registered client's requirements for the selected month. -->
+    {% if client_report %}
+    <h2>Client document status — {{ month }}</h2>
+
+    <!-- Download the report generated for the displayed comparison.
+     The download attribute specifies the saved filename. -->
+    {% if missing_report_download %}
+    <p>
+      <a
+        href="data:text/csv;base64,{{ missing_report_download }}"
+        download="missing_report.csv"
+      >
+        Download missing_report.csv
+      </a>
+    </p>
+    {% endif %}
+
+    <p>
+      Delivered means a matching PDF filename was supplied for this month.
+      Document contents have not been checked. Repeated submissions are listed
+      in the filename review below.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Client ID</th>
+          <th scope="col">Name</th>
+          <th scope="col">Bank</th>
+          <th scope="col">Invoices In</th>
+          <th scope="col">Invoices Out</th>
+          <th scope="col">Payroll</th>
+          <th scope="col">Overall status</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <!-- One row per CSV client, even if no files were uploaded. -->
+        {% for client in client_report %}
+        <tr>
+          <td>{{ client.client_id }}</td>
+          <td>{{ client.name }}</td>
+
+          <!-- Read the status calculated for each document code. -->
+          <td>{{ client.documents["bank"] }}</td>
+          <td>{{ client.documents["invoices_in"] }}</td>
+          <td>{{ client.documents["invoices_out"] }}</td>
+          <td>{{ client.documents["payroll"] }}</td>
+
+          <td>
+            {% if client.missing_count == 0 %} Complete {% else %} {{
+            client.missing_count }} missing {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Display all uploaded filenames, including those needing review. -->
+    {% if file_results %}
+    <h2>Filename review</h2>
+
+    <p>
+      All document months are shown here. Normalized names are previews;
+      original files are unchanged.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Original filename</th>
+          <th scope="col">Normalized filename</th>
+          <th scope="col">Client ID</th>
+          <th scope="col">Document type</th>
+          <th scope="col">Month</th>
+          <th scope="col">Status</th>
+          <th scope="col">Details</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <!-- Create one row for each uploaded file. -->
+        {% for file in file_results %}
+        <tr>
+          <td>{{ file.original_filename }}</td>
+          <td>{{ file.normalized_filename }}</td>
+          <td>{{ file.client_id }}</td>
+          <td>{{ file.document }}</td>
+          <td>{{ file.month }}</td>
+          <td>{{ file.status }}</td>
+          <td>{{ file.message }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Display reminder drafts only after a successful client comparison. -->
+    {% if client_report %}
+    <section>
+      <h2>Reminder email drafts</h2>
+
+      <p>
+        Nothing is sent automatically. Copy the subject and body, review the
+        wording, and replace the signature placeholders.
+      </p>
+
+      {% for reminder in reminders %}
+      <!-- Collapsible sections keep long lists of drafts manageable. -->
+      <details>
+        <summary>{{ reminder.client_id }} — {{ reminder.name }}</summary>
+
+        <p>To: {{ reminder.email }}</p>
+
+        <!-- Unique IDs connect each label to its text field. -->
+        <p>
+          <label for="subject-{{ loop.index }}">Subject</label><br />
+          <textarea id="subject-{{ loop.index }}" rows="2" cols="80" readonly>
+{{ reminder.subject }}</textarea
+          >
+        </p>
+
+        <!-- Readonly text remains selectable and copyable.
+                     Jinja escapes client-provided text automatically. -->
+        <p>
+          <label for="body-{{ loop.index }}">Body</label><br />
+          <textarea id="body-{{ loop.index }}" rows="18" cols="80" readonly>
+{{ reminder.body }}</textarea
+          >
+        </p>
+      </details>
+      {% else %}
+      <!-- Jinja runs this branch when the reminder list is empty. -->
+      <p>All required documents are present. No reminders needed.</p>
+      {% endfor %}
+    </section>
     {% endif %}
   </body>
 </html>
