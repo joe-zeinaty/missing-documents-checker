@@ -2,30 +2,22 @@ from datetime import datetime
 
 from flask import Flask, render_template, request
 
+# Import the modules used to validate inputs and generate comparison outputs.
 from client_parser import parse_clients
-
-# Inspect uploaded filenames and build the monthly client comparison.
 from document_checker import inspect_documents, build_client_report
-
-# Generate the missing-document CSV from the monthly client results.
 from report_export import build_missing_report_download
-
-# Build copy-only reminder drafts from the monthly comparison.
 from reminder_builder import build_reminders
 
-# Create the Flask application.
+# Create the web application and limit the entire upload request to 25 MiB.
+# Requests exceeding this limit are handled by upload_too_large().
 app = Flask(__name__)
-
-# Limit each complete upload request (CSV + documents) to 25 MB.
-# Flask returns an HTTP 413 error if this limit is exceeded.
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 
 
-# GET displays the form.
-# POST handles the files and month submitted through the form.
+# Display the upload form on GET and process a submitted comparison on POST.
 @app.route("/", methods=["GET", "POST"])
 def home():
-    # Initial values for the form and its results.
+    # Set the default reporting month and initialize request-specific results.
     month = "2026-08"
     error = None
     upload_summary = None
@@ -35,54 +27,45 @@ def home():
     reminders = []
 
     if request.method == "POST":
-        # Retrieve the reporting month using the input's name="month".
-        # Use an empty string if the field is missing.
+        # Read the selected month and client register from the submitted form.
         month = request.form.get("month", "")
-
-        # Retrieve the single client CSV using name="clients".
         clients_file = request.files.get("clients")
 
-        # Retrieve all uploads from name="documents".
-        # Ignore empty entries produced when no document was selected.
+        # Collect document uploads, excluding entries with no filename.
+        # This does not check whether a selected file has empty contents.
         documents = [
             file
             for file in request.files.getlist("documents")
             if file.filename
         ]
 
-        # Check that the user supplied a client list.
+        # Require a client register before starting the comparison.
         if not clients_file or not clients_file.filename:
             error = "Please upload your client CSV."
 
-        # Check the filename extension, ignoring capitalization.
-        # This does not validate the CSV's contents; that comes later.
+        # Check the CSV extension; parse_clients() validates its contents.
         elif not clients_file.filename.lower().endswith(".csv"):
             error = "The client list must be a CSV file."
 
         else:
-            # Validate the month on the server, even though the browser
-            # provides a month picker. Browser inputs can be bypassed.
+            # Validate the reporting month independently of browser controls.
             try:
                 parsed_month = datetime.strptime(month, "%Y-%m")
 
-                # Require the exact YYYY-MM format, including a
-                # leading zero for single-digit months.
+                # Require YYYY-MM, including a two-digit month.
                 if parsed_month.strftime("%Y-%m") != month:
                     raise ValueError
 
             except ValueError:
                 error = "Please choose a valid reporting month."
 
-        # Build a confirmation only if all checks passed.
-        # For now, we receive the uploads without parsing their contents,
-        # matching filenames, or deliberately saving them to a folder.
-                # Parse the register only after the file and month checks pass.
-                # Validate the client register before processing document names.
-                # Process documents only after the initial form checks pass.
+        # Run the comparison only after the initial input checks succeed.
         if error is None:
             try:
+                # Read and validate the CSV, returning structured client records.
                 clients = parse_clients(clients_file)
 
+                # Summarize the accepted register and submitted document count.
                 upload_summary = {
                     "clients_filename": clients_file.filename,
                     "client_count": len(clients),
@@ -90,29 +73,31 @@ def home():
                     "month": month,
                 }
 
-                # Inspect every uploaded filename across all months.
-                # Monthly filtering will be applied to the client comparison.
+                # Interpret filenames across all months and flag exceptions,
+                # unknown clients and repeated submissions. PDF contents are
+                # not inspected, and original filenames are not changed.
                 file_results = inspect_documents(documents, clients)
 
-                # Apply the selected month to the client comparison.
-                # The filename audit still contains files from every month.
+                # Compare client requirements against the selected month's
+                # recognized files while preserving the complete filename audit.
                 client_report = build_client_report(
                     clients, file_results, month
                 )
 
-                # Export the same results and month displayed in the table.
+                # Generate the missing-document CSV from the monthly report.
                 missing_report_download = build_missing_report_download(
                     client_report, month
                 )
 
-                # Create drafts only for clients with missing requirements.
+                # Generate copy-only drafts for clients with missing documents.
+                # This function does not send email.
                 reminders = build_reminders(client_report, month)
 
             except ValueError as validation_error:
-                # Report invalid client-register data through the template.
+                # Display validation errors raised during comparison processing.
                 error = str(validation_error)
 
-    # Pass both the client comparison and the complete file audit to HTML.
+    # Render the form, messages, monthly report, download, drafts and file audit.
     return render_template(
         "index.html",
         month=month,
@@ -125,7 +110,7 @@ def home():
     )
 
 
-# Display a readable error when the complete request exceeds 25 MB.
+# Return the form with empty results and HTTP 413 when an upload is too large.
 @app.errorhandler(413)
 def upload_too_large(error):
     return render_template(
@@ -140,7 +125,7 @@ def upload_too_large(error):
     ), 413
 
 
-# Start the local development server when this file is run directly.
-# On Render, Gunicorn imports the app instead, so this block is skipped.
+# Run Flask's development server locally. Gunicorn imports the app on Render,
+# so this block does not execute in the deployed service.
 if __name__ == "__main__":
     app.run()

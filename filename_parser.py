@@ -109,7 +109,8 @@ def parse_filename(filename):
         "invoicesout": "invoices_out",
         "payroll": "payroll",
     }
-
+    
+    # Convert extracted values into the application's standard format.
     client_id = match.group("client").upper()
     document = document_codes[document_key]
     month = normalize_month(match.group("month"))
