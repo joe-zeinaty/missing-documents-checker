@@ -8,6 +8,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>Missing Documents Checker</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   </head>
 
   <body>
@@ -86,10 +91,12 @@
     {% if missing_report_download %}
     <p>
       <a
+        class="button"
         href="data:text/csv;base64,{{ missing_report_download }}"
         download="missing_report.csv"
       >
-        Download missing_report.csv
+        <span aria-hidden="true">↓</span>
+        Download missing documents report
       </a>
     </p>
     {% endif %}
@@ -100,79 +107,57 @@
       in the filename review below.
     </p>
 
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">Client ID</th>
-          <th scope="col">Name</th>
-          <th scope="col">Bank</th>
-          <th scope="col">Invoices In</th>
-          <th scope="col">Invoices Out</th>
-          <th scope="col">Payroll</th>
-          <th scope="col">Overall status</th>
-        </tr>
-      </thead>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Client ID</th>
+            <th scope="col">Name</th>
+            <th scope="col">Bank</th>
+            <th scope="col">Invoices In</th>
+            <th scope="col">Invoices Out</th>
+            <th scope="col">Payroll</th>
+            <th scope="col">Overall status</th>
+          </tr>
+        </thead>
 
-      <tbody>
-        <!-- One row per CSV client, even if no files were uploaded. -->
-        {% for client in client_report %}
-        <tr>
-          <td>{{ client.client_id }}</td>
-          <td>{{ client.name }}</td>
+        <tbody>
+          <!-- One row per CSV client, even if no files were uploaded. -->
+          {% for client in client_report %}
+          <tr>
+            <td>{{ client.client_id }}</td>
+            <td>{{ client.name }}</td>
 
-          <!-- Read the status calculated for each document code. -->
-          <td>{{ client.documents["bank"] }}</td>
-          <td>{{ client.documents["invoices_in"] }}</td>
-          <td>{{ client.documents["invoices_out"] }}</td>
-          <td>{{ client.documents["payroll"] }}</td>
+            <!-- Preserve the existing column order while styling each status. -->
+            {% for code in ["bank", "invoices_in", "invoices_out", "payroll"] %}
+            {% set status = client.documents[code] %}
 
-          <td>
-            {% if client.missing_count == 0 %} Complete {% else %} {{
-            client.missing_count }} missing {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% endif %}
+            <td>
+              {% if status == "Delivered" %}
+              <span class="status status-success">Delivered</span>
+              {% elif status == "Missing" %}
+              <span class="status status-warning">Missing</span>
+              {% else %}
+              <span class="status status-neutral">Not required</span>
+              {% endif %}
+            </td>
+            {% endfor %}
 
-    <!-- Display all uploaded filenames, including those needing review. -->
-    {% if file_results %}
-    <h2>Filename review</h2>
-
-    <p>
-      All document months are shown here. Normalized names are previews;
-      original files are unchanged.
-    </p>
-
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">Original filename</th>
-          <th scope="col">Normalized filename</th>
-          <th scope="col">Client ID</th>
-          <th scope="col">Document type</th>
-          <th scope="col">Month</th>
-          <th scope="col">Status</th>
-          <th scope="col">Details</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        <!-- Create one row for each uploaded file. -->
-        {% for file in file_results %}
-        <tr>
-          <td>{{ file.original_filename }}</td>
-          <td>{{ file.normalized_filename }}</td>
-          <td>{{ file.client_id }}</td>
-          <td>{{ file.document }}</td>
-          <td>{{ file.month }}</td>
-          <td>{{ file.status }}</td>
-          <td>{{ file.message }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            <!-- "Complete" means all required categories have matching filenames. -->
+            <td>
+              {% if client.missing_count == 0 %}
+              <span class="status status-success">Complete</span>
+              {% else %}
+              <span class="status status-warning">
+                {{ client.missing_count }} missing
+              </span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% endif %}
 
     <!-- Display reminder drafts only after a successful client comparison. -->
@@ -208,12 +193,78 @@
 {{ reminder.body }}</textarea
           >
         </p>
+        <!-- Store field IDs so JavaScript can find this specific reminder.
+     type="button" prevents the action from submitting a form. -->
+        <div class="copy-actions">
+          <button
+            type="button"
+            class="button-secondary copy-reminder"
+            data-subject-id="subject-{{ loop.index }}"
+            data-body-id="body-{{ loop.index }}"
+          >
+            <span aria-hidden="true">⧉</span>
+            Copy reminder
+          </button>
+
+          <!-- Announce clipboard success or failure without a popup. -->
+          <span class="copy-feedback" role="status" aria-live="polite"></span>
+        </div>
       </details>
       {% else %}
       <!-- Jinja runs this branch when the reminder list is empty. -->
       <p>All required documents are present. No reminders needed.</p>
       {% endfor %}
     </section>
+    {% endif %}
+    <!-- Keep the complete filename audit at the bottom, collapsed by default. -->
+    {% if file_results %}
+    <details id="filename-review">
+      <!-- Native details/summary provides keyboard-accessible expansion. -->
+      <summary>Filename review ({{ file_results | length }} files)</summary>
+
+      <p>
+        All document months are shown here. Normalized names are previews;
+        original files are unchanged.
+      </p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Original filename</th>
+              <th scope="col">Normalized filename</th>
+              <th scope="col">Client ID</th>
+              <th scope="col">Document type</th>
+              <th scope="col">Month</th>
+              <th scope="col">Status</th>
+              <th scope="col">Details</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <!-- Create one row for each uploaded file. -->
+            {% for file in file_results %}
+            <tr>
+              <td>{{ file.original_filename }}</td>
+              <td>{{ file.normalized_filename }}</td>
+              <td>{{ file.client_id }}</td>
+              <td>{{ file.document }}</td>
+              <td>{{ file.month }}</td>
+              <!-- Keep technical audit details available with a clear visual indicator. -->
+              <td>
+                {% if file.status == "Recognized" %}
+                <span class="status status-success">Recognized</span>
+                {% else %}
+                <span class="status status-warning">{{ file.status }}</span>
+                {% endif %}
+              </td>
+              <td>{{ file.message }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
     {% endif %}
   </body>
 </html>

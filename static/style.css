@@ -1,0 +1,285 @@
+/* Use consistent sizing so padding does not unexpectedly widen elements. */
+* {
+  box-sizing: border-box;
+}
+
+/* Keep the interface neutral, with one primary accent color. */
+:root {
+  --page: #f5f7fa;
+  --surface: #ffffff;
+  --text: #243247;
+  --muted: #526176;
+  --border: #dbe2ea;
+  --primary: #2457a7;
+  --primary-hover: #1b4485;
+}
+
+/* Center the page and use the user's familiar system font. */
+body {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  background: var(--page);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Establish a clear heading hierarchy without oversized text. */
+h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+  line-height: 1.25;
+}
+
+h2 {
+  margin: 32px 0 12px;
+  font-size: 21px;
+}
+
+p {
+  margin: 12px 0;
+}
+
+/* Give the introductory description a quieter appearance. */
+body > h1 + p {
+  margin-bottom: 24px;
+  color: var(--muted);
+}
+
+/* Group the upload controls in a simple card. */
+form {
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+form > p {
+  margin: 0 0 20px;
+}
+
+label {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+/* Make controls legible and comfortable to interact with. */
+input,
+textarea,
+button {
+  font: inherit;
+}
+
+input[type="file"] {
+  width: 100%;
+  padding: 10px;
+  background: #fafbfd;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+input[type="month"] {
+  max-width: 100%;
+  padding: 10px 12px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Style the native file-picker button while retaining normal behavior. */
+input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 12px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Give primary actions a consistent, prominent button style. */
+button,
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  color: #ffffff;
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button:hover,
+.button:hover {
+  background: var(--primary-hover);
+}
+
+/* Keep keyboard focus clearly visible. */
+input:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #5785ce;
+  outline-offset: 3px;
+}
+
+/* Allow wide tables to scroll inside their own container on small screens. */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+/* Separate rows clearly without visually heavy grid lines. */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  text-align: left;
+  font-size: 14px;
+}
+
+th,
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+th {
+  background: #edf2f8;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+td {
+  overflow-wrap: anywhere;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background: #f8faff;
+}
+
+/* Present errors as a distinct message with readable contrast. */
+[role="alert"] {
+  padding: 14px 16px;
+  color: #8a2525;
+  background: #fff1f1;
+  border: 1px solid #efc3c3;
+  border-radius: 8px;
+}
+
+/* Keep each reminder collapsed until the advisor chooses to open it. */
+details {
+  margin: 12px 0;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Override the HTML column width so drafts fit the available screen. */
+textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 12px;
+  color: var(--text);
+  background: #fafbfd;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+/* Reduce padding on phones while preserving usable controls. */
+@media (max-width: 600px) {
+  body {
+    padding: 24px 14px;
+  }
+
+  h1 {
+    font-size: 25px;
+  }
+
+  form {
+    padding: 18px;
+  }
+
+  th,
+  td {
+    padding: 10px;
+  }
+}
+/* Use text as well as color so statuses remain understandable to everyone. */
+.status {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-success {
+  color: #21633d;
+  background: #e8f5ec;
+}
+
+.status-warning {
+  color: #814c09;
+  background: #fff2dc;
+}
+
+.status-neutral {
+  color: #526176;
+  background: #edf1f5;
+}
+
+/* Keep secondary actions visually quieter than the main check button. */
+.button-secondary {
+  color: var(--primary);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.button-secondary:hover {
+  color: var(--primary);
+  background: #edf2f8;
+}
+
+/* Place copy confirmation beside the button and allow wrapping on phones. */
+.copy-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.copy-feedback {
+  color: var(--muted);
+  font-size: 13px;
+}
